@@ -54,4 +54,7 @@
                        :artifact "target/weave.jar"
                        :repository {"s3-release-repo"
                                     {:url "s3p://clojars-public.nakkaya.com"}}
-                       :sign-releases false}}}}
+                       :sign-releases false}}
+  
+  :release {:extra-deps {applied-science/deps-library {:mvn/version "0.4.0"}}
+            :main-opts ["-m" "applied-science.deps-library"]}}}
