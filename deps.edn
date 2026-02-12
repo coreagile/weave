@@ -39,9 +39,9 @@
           :exec-fn hf.depstar/jar
           :exec-args {:jar "target/weave.jar"
                       :sync-pom true
-                      :group-id "weave"
-                      :artifact-id "core"
-                      :version "0.1.0-SNAPSHOT"}}
+                      :group-id "me.calmabiding"
+                      :artifact-id "weave"
+                      :version "0.2.4"}}
 
   :install {:replace-deps {slipset/deps-deploy {:mvn/version "0.2.2"}}
             :exec-fn deps-deploy.deps-deploy/deploy
