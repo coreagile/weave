@@ -304,6 +304,7 @@
             :icon - Path to an icon file in the classpath (PNG format)
             :head - Additional HTML to include in the head section
             :view-port - The viewport meta tag
+            :tailwind - Whether to include Tailwind CSS (default: true)
             :keep-alive - Whether to keep SSE connections alive when tab is hidden
             :dev-mode - When true, enables additional development features like signal change logging
             :push - Push notification options (when present, exposes VAPID public key)"
@@ -327,7 +328,8 @@
               [:link {:rel "manifest" :href "/manifest.json"}]])
            [:title (or (:title opts) "Weave")]
            ;;
-           [:script {:src "/tailwind@3.4.16.js"}]
+           (when (get opts :tailwind true)
+             [:script {:src "/tailwind@3.4.16.js"}])
            [:script {:src "/squint.core.umd@0.9.182.js"}]
            [:script {:type "module" :src "/weave.js"}]
            (when-let [push-opts (:push opts)]
@@ -689,8 +691,6 @@
   (push-script!
    (str "document.cookie = '" cookie "';")))
 
-
-
 (defn- load-icon
   "Load an icon from the classpath."
   [icon-path]
@@ -777,6 +777,23 @@
           (resp/content-type "application/json")
           (resp/charset "UTF-8")))))
 
+(defn- wrap-index-files
+  "Middleware that serves index.html for directory requests."
+  [handler]
+  (fn [request]
+    (let [uri (:uri request)
+          looks-like-dir? (or (s/ends-with? uri "/")
+                              (not (s/includes? (last (s/split uri #"/")) ".")))
+          ;; Build index.html path
+          index-path (if (s/ends-with? uri "/")
+                       (str "public" uri "index.html")
+                       (str "public" uri "/index.html"))]
+      (if (and looks-like-dir?
+               (io/resource index-path))
+        (-> (resp/resource-response index-path)
+            (resp/content-type "text/html"))
+        (handler request)))))
+
 ;; This method is needed to handle resources from GraalVM-compiled
 ;; JARs.  When running in a GraalVM native image, resources are
 ;; accessed via the 'resource:' URL scheme instead of the standard
@@ -819,6 +836,7 @@
    Parameters:
      view - A function that returns the Hiccup view to render
      options - A map of server options:
+              :base-path - URL path prefix for the app (default: \"/\")
               :http-kit - HTTP server options map:
                          :bind - IP address to bind to (default: \"0.0.0.0\")
                          :port - HTTP server port (default: 8080)
@@ -831,6 +849,7 @@
               :sse - Server-Sent Events options map:
                     :enabled - Whether to enable SSE (default: true)
                     :keep-alive - Whether to keep SSE connections alive when tab is hidden (default: false)
+              :tailwind - Whether to include Tailwind CSS (default: true)
               :dev-mode - When true, enables additional development features like signal change logging (default: false)
               :handlers - A vector of custom route handlers (Compojure routes) that
                           will be included in the application's routing system
@@ -864,6 +883,7 @@
      An integrant system."
   [view options]
   (let [server-id (str (random-uuid))
+        base-path (or (:base-path options) "/")
         options (update options :sse #(merge {:enabled true :keep-alive false} %))
         csrf-secret (or (:csrf-secret options)
                         (str (random-uuid)))
@@ -893,7 +913,7 @@
                               (or icon-routes [])
                               (or push-routes []))
         routes (routes
-                (GET "/" _req
+                (GET base-path _req
                   (app-outer server-id options))
                 (POST "/app-loader" req
                   (let [body (:body req)
@@ -911,6 +931,7 @@
                 (apply routes custom-routes)
                 (route/not-found "Not Found"))
         handler-chain (-> routes
+                          wrap-index-files
                           handler-router-middleware
                           (session/wrap-session jwt-secret)
                           wrap-stale-check

@@ -9,9 +9,9 @@ configuration.
 
 ### Tailwind CSS
 
-[Tailwind CSS](https://tailwindcss.com/) v3.4.16 is included, it
-provides a utility-first CSS framework. You can use Tailwind classes
-directly in your Hiccup markup:
+[Tailwind CSS](https://tailwindcss.com/) v3.4.16 is included by
+default. It provides a utility-first CSS framework. You can use
+Tailwind classes directly in your Hiccup markup:
 
 ```clojure
 [:div.flex.items-center.justify-between.p-4.bg-white.shadow
@@ -20,16 +20,24 @@ directly in your Hiccup markup:
   "Click Me"]]
 ```
 
+Tailwind is enabled by default, but you can disable it if you prefer
+to use your own CSS framework:
+
+```clojure
+(weave/run view-fn
+  {:tailwind false})
+```
+
 ### Datastar
 
-[Datastar](https://data-star.dev/) v1.0.0-beta.11 is included for
+[Datastar](https://data-star.dev/) v1.0.0-RC.5 is included for
 client-side reactivity and event handling. Weave uses Datastar
 internally for its event system and server-sent events (SSE)
 communication.
 
 ### Squint
 
-[Squint](https://github.com/squint-cljs/squint) v0.8.147 is included
+[Squint](https://github.com/squint-cljs/squint) v0.9.182 is included
 for JavaScript interoperability, allowing you to write Clojure code
 that gets transpiled to JavaScript for client-side execution.
 

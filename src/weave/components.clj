@@ -1,13 +1,17 @@
 (ns weave.components
   (:require
-   [dev.onionpancakes.chassis.core :as c]
    [camel-snake-kebab.core :as csk]
-   [clojure.string :as str]
    [clojure.java.io :as io]
+   [clojure.string :as str]
+   [dev.onionpancakes.chassis.core :as c]
    [weave.core :as core]
    [weave.squint :refer [clj->js]])
   (:import
-   [java.time Instant ZonedDateTime LocalDateTime ZoneId]
+   [java.time
+    Instant
+    LocalDateTime
+    ZoneId
+    ZonedDateTime]
    [java.time.format DateTimeFormatter]))
 
 (defn tw
@@ -249,9 +253,11 @@
   (let [theme-bg (or (:bg-class attrs) (get-theme-class :card :bg))
         theme-border (or (:border-class attrs) (get-theme-class :card :border))
         theme-shadow (or (:shadow-class attrs) (get-theme-class :card :shadow))
-        base-attrs {:class (str "overflow-hidden "
-                                theme-bg " " theme-border " " theme-shadow
-                                " sm:rounded-lg ring-1 ring-gray-200 dark:ring-gray-700")}
+        theme-radius (or (get-theme-class :card :radius) "sm:rounded-lg")
+        theme-ring (or (get-theme-class :card :ring) "ring-1 ring-gray-200 dark:ring-gray-700")
+        base-attrs {:class (tw "overflow-hidden"
+                               theme-bg theme-border theme-shadow
+                               theme-radius theme-ring)}
         filtered-attrs (dissoc attrs :bg-class :border-class :shadow-class)
         merged-attrs (merge-attrs base-attrs filtered-attrs)]
     [:div merged-attrs
@@ -263,10 +269,11 @@
   (let [theme-bg (or (:bg-class attrs) (get-theme-class :card-with-header :bg))
         theme-border (or (:border-class attrs) (get-theme-class :card-with-header :border))
         theme-shadow (or (:shadow-class attrs) (get-theme-class :card-with-header :shadow))
-        base-attrs {:class (str theme-border
-                                " overflow-hidden rounded-lg "
-                                theme-bg " " theme-shadow
-                                " ring-1 ring-gray-200 dark:ring-gray-700")}
+        theme-radius (or (get-theme-class :card-with-header :radius) "rounded-lg")
+        theme-ring (or (get-theme-class :card-with-header :ring) "ring-1 ring-gray-200 dark:ring-gray-700")
+        base-attrs {:class (tw "overflow-hidden"
+                               theme-border theme-bg theme-shadow
+                               theme-radius theme-ring)}
         filtered-attrs (dissoc attrs :bg-class :border-class :shadow-class)
         merged-attrs (merge-attrs base-attrs filtered-attrs)
         header (first content)
@@ -802,23 +809,22 @@
 (defmethod c/resolve-alias ::modal
   [_ attrs content]
   (let [size (or (:size attrs) :md)
-        signal (or (csk/->camelCase (:id attrs)) "modal")
+        signal (-> (or (:id attrs) "modal")
+                   (csk/->camelCase))
         overlay-class (get-theme-class :modal :overlay)
         container-class (get-theme-class :modal :container)
         dialog-class (get-theme-class :modal :dialog)
         size-class (get-size-class :modal size)
         dialog-class-with-size (tw dialog-class size-class)
-        base-attrs {:id (or (:id attrs) "modal")
+        base-attrs {:id signal
                     :data-show (str "$" signal)}
         filtered-attrs (dissoc attrs :size :id)
         merged-attrs (merge-attrs base-attrs filtered-attrs)]
-    [:div
-     {(-> (str "data-signals-" signal) keyword) "false"}
-     [:div merged-attrs
-      [:div {:class overlay-class}]
-      [:div {:class container-class}
-       [:div {:class dialog-class-with-size}
-        content]]]]))
+    [:div merged-attrs
+     [:div {:class overlay-class}]
+     [:div {:class container-class}
+      [:div {:class dialog-class-with-size}
+       content]]]))
 
 ;;    Example:
 ;;    [::table {:columns [{:name "name" :label "Name" :align :left}
@@ -861,7 +867,8 @@
                        (case (:align column)
                          :right "text-right"
                          :left "text-left"
-                         "text-left"))}
+                         "text-left")
+                       (:class column))}
            (:label column)])]]
 
       ;; Body
@@ -878,7 +885,8 @@
                          (case (:align column)
                            :right "text-right"
                            :left "text-left"
-                           "text-left"))}
+                           "text-left")
+                         (:class column))}
              (get row (keyword (:name column)) "-")])])]]]))
 
 (defmethod c/resolve-alias ::dropdown

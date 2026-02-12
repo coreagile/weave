@@ -780,6 +780,26 @@
         :data-on-click handle-action}
        "Delete"]])])
 
+(defn data-call-with-nested-test-view []
+  [:div {:id "view"}
+   [:div#result "No action performed yet"]
+   (let [handle-action (core/handler []
+                         (let [{:keys [user]} core/*signals*
+                               {:keys [name id]} user]
+                           (core/push-html!
+                            [:div#result (str "User: " name ", ID: " id)])))]
+     [:div.button-group
+      [:button#user-one-button
+       {:data-call-with-user.name "Alice"
+        :data-call-with-user.id "123"
+        :data-on-click handle-action}
+       "User One"]
+      [:button#user-two-button
+       {:data-call-with-user.name "Bob"
+        :data-call-with-user.id "456"
+        :data-on-click handle-action}
+       "User Two"]])])
+
 (test-with-sse-variants
  'data-call-with-test
  data-call-with-test-view
@@ -800,6 +820,28 @@
   #(= "Action: delete, Item: 456"
       (el-text :result)))
  (is (= "Action: delete, Item: 456"
+        (el-text :result))))
+
+(test-with-sse-variants
+ 'data-call-with-nested-test
+ data-call-with-nested-test-view
+
+ (visible? :user-one-button)
+ (is (= "No action performed yet"
+        (el-text :result)))
+
+ (click :user-one-button)
+ (e/wait-predicate
+  #(= "User: Alice, ID: 123"
+      (el-text :result)))
+ (is (= "User: Alice, ID: 123"
+        (el-text :result)))
+
+ (click :user-two-button)
+ (e/wait-predicate
+  #(= "User: Bob, ID: 456"
+      (el-text :result)))
+ (is (= "User: Bob, ID: 456"
         (el-text :result))))
 
 (defn confirm-test-view []
@@ -1481,3 +1523,40 @@
 (deftest stale-connection-reload-test-without-sse
   (testing "Server restart triggers page reload (SSE disabled)"
     (run-stale-reload-test false)))
+
+(defn base-path-test-view []
+  [:div#view
+   [:h1#content "Hello from Base Path!"]
+   [:button
+    {:id "test-btn"
+     :data-on-click
+     (core/handler []
+       (core/push-html! [:h1#content "Button Clicked!"]))}
+    "Click Me"]])
+
+(deftest base-path-test
+  (testing "App shell is served from custom base-path"
+    (let [server (core/run base-path-test-view
+                           (assoc weave-options :base-path "/app"))]
+      (try
+        (let [root-response (http/get url {:throw-exceptions false})]
+          (is (= 404 (:status root-response))
+              "Root path should return 404 when base-path is /app"))
+
+        (let [app-response (http/get (str url "/app") {:throw-exceptions false})]
+          (is (= 200 (:status app-response))
+              "Base path /app should return 200")
+          (is (str/includes? (:body app-response) "<!DOCTYPE html>")
+              "Base path should return HTML"))
+
+        (e/with-chrome-headless (driver-options) driver
+          (binding [*browser* driver]
+            (e/go driver (str url "/app"))
+            (visible? :content)
+            (is (= "Hello from Base Path!" (el-text :content)))
+
+            (click :test-btn)
+            (e/wait-predicate #(= "Button Clicked!" (el-text :content)))
+            (is (= "Button Clicked!" (el-text :content)))))
+        (finally
+          (ig/halt! server))))))
