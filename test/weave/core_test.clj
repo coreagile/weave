@@ -844,6 +844,124 @@
  (is (= "User: Bob, ID: 456"
         (el-text :result))))
 
+(defn bind-with-call-with-test-view []
+  [:div {:id "view"
+         :data-signals-approval.selected-account ""}
+   [:div#result "No selection yet"]
+   [:select#account-select
+    {:data-bind-approval.selected-account true
+     :data-call-with-approval.item-id "999"
+     :data-on-change
+     (core/handler []
+       (let [{:keys [approval]} core/*signals*
+             {:keys [selected-account item-id]} approval]
+         (core/push-html!
+          [:div#result (str "Account: " selected-account ", Item: " item-id)])))}
+    [:option {:value ""} "Select an account"]
+    [:option {:value "acc-1"} "Account 1"]
+    [:option {:value "acc-2"} "Account 2"]]])
+
+(test-with-sse-variants
+ 'bind-with-call-with-test
+ (fn [] (bind-with-call-with-test-view))
+
+ (visible? :account-select)
+ (is (= "No selection yet" (el-text :result)))
+
+ (e/select *browser* :account-select "Account 1")
+ (e/wait-predicate
+  #(str/includes? (el-text :result) "Account:"))
+ (is (= "Account: acc-1, Item: 999" (el-text :result))))
+
+(defn flat-bind-with-flat-call-with-test-view []
+  [:div {:id "view"
+         :data-signals-selected-value ""}
+   [:div#result "No selection yet"]
+   [:select#color-select
+    {:data-bind-selected-value true
+     :data-call-with-action "paint"
+     :data-on-change
+     (core/handler []
+       (let [{:keys [selected-value action]} core/*signals*]
+         (core/push-html!
+          [:div#result (str "Value: " selected-value ", Action: " action)])))}
+    [:option {:value ""} "Pick a color"]
+    [:option {:value "red"} "Red"]
+    [:option {:value "blue"} "Blue"]]])
+
+(test-with-sse-variants
+ 'flat-bind-with-flat-call-with-test
+ (fn [] (flat-bind-with-flat-call-with-test-view))
+
+ (visible? :color-select)
+ (is (= "No selection yet" (el-text :result)))
+
+ (e/select *browser* :color-select "Red")
+ (e/wait-predicate
+  #(str/includes? (el-text :result) "Value:"))
+ (is (= "Value: red, Action: paint" (el-text :result))))
+
+(defn multi-bind-with-call-with-test-view []
+  [:div {:id "view"
+         :data-signals-form.name ""
+         :data-signals-form.email ""}
+   [:div#result "No submission yet"]
+   [:input#name-input {:data-bind-form.name true}]
+   [:input#email-input {:data-bind-form.email true}]
+   [:button#submit-btn
+    {:data-call-with-form.record-id "123"
+     :data-call-with-form.action "update"
+     :data-on-click
+     (core/handler []
+       (let [{:keys [form]} core/*signals*
+             {:keys [name email record-id action]} form]
+         (core/push-html!
+          [:div#result (str name "|" email "|" record-id "|" action)])))}
+    "Submit"]])
+
+(test-with-sse-variants
+ 'multi-bind-with-call-with-test
+ (fn [] (multi-bind-with-call-with-test-view))
+
+ (visible? :submit-btn)
+ (is (= "No submission yet" (el-text :result)))
+
+ (fill :name-input "Alice")
+ (fill :email-input "alice@test.com")
+ (click :submit-btn)
+ (e/wait-predicate
+  #(str/includes? (el-text :result) "Alice"))
+ (is (= "Alice|alice@test.com|123|update" (el-text :result))))
+
+(defn deep-nested-bind-with-call-with-test-view []
+  [:div {:id "view"
+         :data-signals-a.b.selected ""}
+   [:div#result "No selection yet"]
+   [:select#deep-select
+    {:data-bind-a.b.selected true
+     :data-call-with-a.b.static-id "xyz"
+     :data-on-change
+     (core/handler []
+       (let [b (get-in core/*signals* [:a :b])
+             {:keys [selected static-id]} b]
+         (core/push-html!
+          [:div#result (str "Selected: " selected ", Static: " static-id)])))}
+    [:option {:value ""} "Choose"]
+    [:option {:value "opt-1"} "Option 1"]
+    [:option {:value "opt-2"} "Option 2"]]])
+
+(test-with-sse-variants
+ 'deep-nested-bind-with-call-with-test
+ (fn [] (deep-nested-bind-with-call-with-test-view))
+
+ (visible? :deep-select)
+ (is (= "No selection yet" (el-text :result)))
+
+ (e/select *browser* :deep-select "Option 1")
+ (e/wait-predicate
+  #(str/includes? (el-text :result) "Selected:"))
+ (is (= "Selected: opt-1, Static: xyz" (el-text :result))))
+
 (defn confirm-test-view []
   [:div#view
    [:div#status "Ready"]
@@ -1560,3 +1678,45 @@
             (is (= "Button Clicked!" (el-text :content)))))
         (finally
           (ig/halt! server))))))
+
+(defn shared-action-button [{:keys [id on-click]}]
+  [:button
+   {:id id
+    :data-on-click (core/handler [on-click] (on-click))}
+   (str "Button " id)])
+
+(defn fn-param-handler-bug-test-view
+  "Two buttons using the same shared component with different fn callbacks.
+   Button A should set result to 'handler-a', Button B to 'handler-b'."
+  []
+  [:div#view
+   [:div#result "initial"]
+   (shared-action-button
+    {:id "btn-a"
+     :on-click (fn []
+                 (core/push-html! [:div#result "handler-a"]))})
+   (shared-action-button
+    {:id "btn-b"
+     :on-click (fn []
+                 (core/push-html! [:div#result "handler-b"]))})])
+
+(deftest fn-param-handler-bug-test
+  (with-browser fn-param-handler-bug-test-view weave-options
+    (testing "Different fn params in shared component should invoke correct handler"
+      (visible? :result)
+      (is (= "initial" (el-text :result)))
+
+      (click :btn-a)
+      (e/wait-predicate #(not= "initial" (el-text :result)))
+      (is (= "handler-a" (el-text :result))
+          "Button A should execute handler-a, not handler-b")
+
+      (e/go *browser* url)
+      (visible? :result)
+      (is (= "initial" (el-text :result)))
+
+      (click :btn-b)
+      (e/wait-predicate #(not= "initial" (el-text :result)))
+      (is (= "handler-b" (el-text :result))
+          "Button B should execute handler-b, not handler-a"))))
+

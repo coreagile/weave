@@ -81,6 +81,12 @@
   "Current Server-Sent Events (SSE) generator instance."
   nil)
 
+(def ^:dynamic *sse-enabled*
+  "Whether SSE persistent connections are enabled for this server instance.
+   When false, session activity tracking is skipped since there is no
+   on-close cleanup path to remove stale entries."
+  true)
+
 (def ^:dynamic *server-id*
   "The current server instance's unique ID. Generated at server startup
    and used to detect stale connections from old server instances."
@@ -161,10 +167,18 @@
         {}
         (read-json signals)))))
 
+(defn- client-accepts-gzip? [request]
+  (when-let [accept (get-in request [:headers "accept-encoding"])]
+    (s/includes? accept "gzip")))
+
 (defn ->sse-response
   "Create a Server-Sent Events (SSE) response with the given options."
   [opts]
-  (hk-gen/->sse-response *request* opts))
+  (let [request *request*
+        opts (if (client-accepts-gzip? request)
+               (assoc opts hk-gen/write-profile hk-gen/gzip-profile)
+               opts)]
+    (hk-gen/->sse-response request opts)))
 
 (defn- request-options
   "Generate a JavaScript object string with request options for datastar.
@@ -320,7 +334,16 @@
                        :content (str "width=device-width,"
                                      "initial-scale=1.0,"
                                      "maximum-scale=1.0,"
-                                     "user-scalable=no")}])
+                                     "user-scalable=no,"
+                                     "viewport-fit=cover")}])
+           (let [bg-color (get-in opts [:pwa :background-color])]
+             [[:meta {:name "mobile-web-app-capable" :content "yes"}]
+              [:meta {:name "apple-mobile-web-app-capable" :content "yes"}]
+              [:meta {:name "apple-mobile-web-app-status-bar-style" :content "black-translucent"}]
+              [:link {:rel "stylesheet" :href "/weave.css"}]
+              [:style (str "html { background-color: " (or bg-color "#ffffff") "; }")]
+              (when bg-color
+                [:meta {:name "theme-color" :content bg-color}])])
            ;;
            (when (:icon opts)
              [[:link {:rel "icon" :href "/favicon.png"}]
@@ -439,10 +462,12 @@
             (handler request)
             (hk-gen/->sse-response
              request
-             {hk-gen/on-open
-              (fn [sse-gen]
-                (d*/execute-script! sse-gen "weave.reload();")
-                (d*/close-sse! sse-gen))})))
+             (cond-> {hk-gen/on-open
+                      (fn [sse-gen]
+                        (d*/execute-script! sse-gen "weave.reload();")
+                        (d*/close-sse! sse-gen))}
+               (client-accepts-gzip? request)
+               (assoc hk-gen/write-profile hk-gen/gzip-profile)))))
         ;; Not internal - pass through
         (handler request)))))
 
@@ -489,10 +514,10 @@
                                (not (authenticated? *request*)))
                         {:status 403, :headers {}, :body nil}
                         (do
-                          (session/record-activity!
-                           *session-id* *instance-id*)
-                          (hk-gen/->sse-response
-                           *request*
+                          (when *sse-enabled*
+                            (session/record-activity!
+                             *session-id* *instance-id*))
+                          (->sse-response
                            {hk-gen/on-open
                             (fn [sse-gen#]
                               (binding [*sse-gen* sse-gen#]
@@ -949,6 +974,7 @@
         (fn [request]
           (binding [*view* view
                     *server-id* server-id
+                    *sse-enabled* (get-in options [:sse :enabled])
                     session/*csrf-keyspec* csrf-keyspec
                     *handler-options* (or (:handler-options options) {})]
             (handler-chain request)))]

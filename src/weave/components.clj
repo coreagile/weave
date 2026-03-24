@@ -26,12 +26,19 @@
                                         %)
                                      classes)))))
 
+(defn- normalize-class [class-val]
+  (cond
+    (string? class-val) class-val
+    (sequential? class-val) (str/join " " class-val)
+    :else class-val))
+
 (defn- merge-classes
   "Merge base class with custom class if provided."
   [base-class custom-class]
-  (if (and custom-class (not (str/blank? custom-class)))
-    (tw base-class custom-class)
-    base-class))
+  (let [custom-class (normalize-class custom-class)]
+    (if (and custom-class (not (str/blank? custom-class)))
+      (tw base-class custom-class)
+      base-class)))
 
 (defn- merge-attrs
   "Merge component base attributes with user attributes.
@@ -45,12 +52,20 @@
 
 (def ^:dynamic *theme*
   {:view {:bg "bg-[#f7f7f7] dark:bg-[#1a1a1a]"}
+   :hr {:border "border-[#e0e0e0] dark:border-[#333333]"
+        :light "border-[#f0f0f0] dark:border-[#2a2a2a]"}
    :card {:bg "bg-white dark:bg-[#252525]"
-          :border "border border-[#e0e0e0] dark:border-[#333333]"
-          :shadow "shadow-sm"}
+          :border "border border-[#e0e0e0] dark:border-[#333333]"}
    :card-with-header {:bg "bg-white dark:bg-[#252525]"
                       :border "divide-y divide-[#e0e0e0] dark:divide-[#333333]"
                       :shadow "shadow-sm"}
+   :code {:bg "bg-[#f5f5f5] dark:bg-[#1a1a1a]"
+          :text "text-[#171717] dark:text-[#e5e5e5]"
+          :base "font-mono text-sm rounded p-3 overflow-x-auto whitespace-pre-wrap"}
+   :stat {:bg "bg-white dark:bg-[#252525]"
+          :base "overflow-hidden rounded-lg px-4 py-5 shadow ring-1 ring-inset ring-[#e0e0e0] dark:ring-[#333333] sm:p-6"
+          :label "truncate text-sm font-medium text-[#737373] dark:text-[#a0a0a0]"
+          :value "mt-1 text-3xl font-semibold tracking-tight text-[#171717] dark:text-[#e5e5e5]"}
    :link {:base "text-[#4f46e5] hover:text-[#4338ca] dark:text-[#5b8ff9] dark:hover:text-[#7ba8ff]"}
    :sidebar {:bg "bg-[#f7f7f7] dark:bg-[#202020]"
              :text "text-[#525252] dark:text-[#d0d0d0]"
@@ -58,10 +73,11 @@
              :active "bg-[#e0e0e0] text-[#171717] dark:bg-[#2a2a2a] dark:text-white"}
    :button {:base "inline-flex items-center justify-center text-center gap-2 rounded-lg shadow-theme-xs transition"
             :sizes {:xs "px-2 py-1.5 text-xs"
-                    :s "px-3 py-2 text-sm"
-                    :md "px-4 py-3 text-sm"
+                    :sm "px-3 py-2 text-sm"
+                    :md "px-4 py-2.5 text-sm"
                     :lg "px-5 py-3.5 text-base"
-                    :xl "px-6 py-4 text-lg"}
+                    :xl "px-6 py-4 text-lg"
+                    :icon "p-2"}
             :variants {:primary {:bg "bg-[#4f46e5] dark:bg-[#5b8ff9]"
                                  :hover "hover:bg-[#4338ca] dark:hover:bg-[#7ba8ff]"
                                  :focus "focus:outline-none"
@@ -73,10 +89,22 @@
                        :secondary {:bg "bg-white dark:bg-[#252525]"
                                    :hover "hover:bg-[#f5f5f5] dark:hover:bg-[#2a2a2a]"
                                    :focus "focus:outline-none"
-                                   :text "text-[#525252] dark:text-[#d0d0d0] font-medium ring-1 ring-inset ring-[#e0e0e0] dark:ring-[#333333]"}}}
+                                   :text "text-[#525252] dark:text-[#d0d0d0] font-medium ring-1 ring-inset ring-[#e0e0e0] dark:ring-[#333333]"}
+                       :success {:bg "bg-green-500 dark:bg-green-600"
+                                 :hover "hover:bg-green-600 dark:hover:bg-green-500"
+                                 :focus "focus:outline-none"
+                                 :text "text-white font-medium"}
+                       :info {:bg "bg-blue-500 dark:bg-blue-600"
+                              :hover "hover:bg-blue-600 dark:hover:bg-blue-500"
+                              :focus "focus:outline-none"
+                              :text "text-white font-medium"}
+                       :ghost {:bg ""
+                               :hover ""
+                               :focus "focus:outline-none"
+                               :text "text-[#737373] dark:text-[#a0a0a0] hover:text-[#4f46e5] dark:hover:text-[#5b8ff9] font-medium"}}}
    :input {:base "block w-full h-11 rounded-lg border bg-transparent shadow-sm focus:outline-hidden focus:ring-3"
            :sizes {:xs "px-3 py-2 text-xs"
-                   :s "px-3.5 py-2 text-sm"
+                   :sm "px-3.5 py-2 text-sm"
                    :md "px-4 py-2.5 text-sm"
                    :lg "px-4 py-3 text-base"
                    :xl "px-5 py-3.5 text-lg"}
@@ -87,7 +115,7 @@
            :placeholder "placeholder:text-[#a3a3a3] dark:placeholder:text-[#707070]"}
    :label {:base "mb-1.5 block font-medium"
            :sizes {:xs "text-xs"
-                   :s "text-sm"
+                   :sm "text-sm"
                    :md "text-sm"
                    :lg "text-base"
                    :xl "text-lg"}
@@ -122,7 +150,7 @@
             :icon "absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none"}
    :modal {:overlay "fixed inset-0 z-50 bg-black/50 dark:bg-black/80 transition-opacity"
            :container "fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-           :dialog "relative bg-white dark:bg-[#252525] rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+           :dialog "relative bg-white dark:bg-[#252525] text-[#171717] dark:text-[#e5e5e5] rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
            :sizes {:sm "max-w-sm"
                    :md "max-w-md"
                    :lg "max-w-lg"
@@ -141,13 +169,19 @@
                  :odd "bg-[#fafafa] dark:bg-[#202020]"}
            :cell {:text "text-sm text-[#171717] dark:text-[#e5e5e5]"
                   :padding "px-6 py-4 whitespace-nowrap"}}
+   :heading {:text "text-[#171717] dark:text-[#e5e5e5]"
+             :variants {:secondary {:text "text-[#525252] dark:text-[#d0d0d0]"}
+                        :caption {:text "text-[#737373] dark:text-[#a0a0a0]"}}}
+   :text {:text "text-[#171717] dark:text-[#e5e5e5]"
+          :variants {:secondary {:text "text-[#525252] dark:text-[#d0d0d0]"}
+                     :caption {:text "text-[#737373] dark:text-[#a0a0a0]"}}}
    :dropdown {:menu {:bg "bg-white dark:bg-[#2a2a2a]"
                      :border "ring-1 ring-black ring-opacity-5 dark:ring-white dark:ring-opacity-10"
                      :shadow "shadow-xl"
-                     :divider "divide-y divide-gray-100 dark:divide-gray-800"}
+                     :divider "divide-y divide-[#f0f0f0] dark:divide-[#2a2a2a]"}
               :item {:base "flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors"
-                     :variants {:default {:text "text-gray-700 dark:text-gray-200"
-                                          :hover "hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 dark:hover:text-white"}
+                     :variants {:default {:text "text-[#525252] dark:text-[#e5e5e5]"
+                                          :hover "hover:bg-indigo-50 dark:hover:bg-[#333333] hover:text-indigo-600 dark:hover:text-white"}
                                 :danger {:text "text-red-700 dark:text-red-400"
                                          :hover "hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-300"}}}}})
 
@@ -199,22 +233,19 @@
   [_ attrs _content]
   (let [icon-id (or (:id attrs) "")
         icon-class (or (:class attrs) "")
-        size (or (:size attrs) 24)
-        size-class (str "h-" size " w-" size)
-        svg (get-icon-svg icon-id)
-        final-class (tw size-class icon-class)]
-
-    (when svg
-      (-> svg
-          (str/replace
-           #"<svg"
-           (str "<svg class=\"" final-class "\""))
-          c/raw))))
+        size (:size attrs)
+        size-class (when size (str "h-" size " w-" size))
+        final-class (tw (or size-class (when-not (seq icon-class) "h-5 w-5")) icon-class)]
+    [:svg {:class final-class
+           :viewBox "0 0 24 24"
+           :fill "currentColor"
+           :xmlns "http://www.w3.org/2000/svg"}
+     [:use {:href (str "/heroicons-sprite.svg#" icon-id)}]]))
 
 (defmethod c/resolve-alias ::view
   [_ attrs content]
   (let [theme-bg (or (:bg-class attrs) (get-theme-class :view :bg))
-        base-attrs {:class (str "w-full h-full " theme-bg)}
+        base-attrs {:class (str "w-full min-h-full " theme-bg)}
         filtered-attrs (dissoc attrs :bg-class)
         merged-attrs (merge-attrs base-attrs filtered-attrs)]
     [:div merged-attrs
@@ -248,21 +279,80 @@
     [:div merged-attrs
      content]))
 
+(defn- resolve-text-variant [theme-key variant]
+  (if-let [variant-text (get-in *theme* [theme-key :variants variant :text])]
+    variant-text
+    (get-in *theme* [theme-key :text])))
+
+(defmethod c/resolve-alias ::h1
+  [_ attrs content]
+  (let [variant (:variant attrs)
+        theme-text (resolve-text-variant :heading variant)
+        attrs (dissoc attrs :variant)]
+    (into [:h1 (merge-attrs {:class theme-text} attrs)] content)))
+
+(defmethod c/resolve-alias ::h2
+  [_ attrs content]
+  (let [variant (:variant attrs)
+        theme-text (resolve-text-variant :heading variant)
+        attrs (dissoc attrs :variant)]
+    (into [:h2 (merge-attrs {:class theme-text} attrs)] content)))
+
+(defmethod c/resolve-alias ::h3
+  [_ attrs content]
+  (let [variant (:variant attrs)
+        theme-text (resolve-text-variant :heading variant)
+        attrs (dissoc attrs :variant)]
+    (into [:h3 (merge-attrs {:class theme-text} attrs)] content)))
+
+(defmethod c/resolve-alias ::h4
+  [_ attrs content]
+  (let [variant (:variant attrs)
+        theme-text (resolve-text-variant :heading variant)
+        attrs (dissoc attrs :variant)]
+    (into [:h4 (merge-attrs {:class theme-text} attrs)] content)))
+
+(defmethod c/resolve-alias ::span
+  [_ attrs content]
+  (let [variant (:variant attrs)
+        theme-text (resolve-text-variant :text variant)
+        attrs (dissoc attrs :variant)]
+    (into [:span (merge-attrs {:class theme-text} attrs)] content)))
+
+(defmethod c/resolve-alias ::p
+  [_ attrs content]
+  (let [variant (:variant attrs)
+        theme-text (resolve-text-variant :text variant)
+        attrs (dissoc attrs :variant)]
+    (into [:p (merge-attrs {:class theme-text} attrs)] content)))
+
+(defmethod c/resolve-alias ::code
+  [_ attrs content]
+  (let [base (get-theme-class :code :base)
+        bg (get-theme-class :code :bg)
+        text (get-theme-class :code :text)]
+    (into [:pre (merge-attrs {:class (tw base bg text)} attrs)] content)))
+
+(defmethod c/resolve-alias ::hr
+  [_ attrs _content]
+  (let [variant (:variant attrs)
+        theme-border (if (= variant :light)
+                       (get-theme-class :hr :light)
+                       (get-theme-class :hr :border))
+        base-attrs {:class (tw "border-t" theme-border)}
+        filtered-attrs (dissoc attrs :variant)
+        merged-attrs (merge-attrs base-attrs filtered-attrs)]
+    [:hr merged-attrs]))
+
 (defmethod c/resolve-alias ::card
   [_ attrs content]
   (let [theme-bg (or (:bg-class attrs) (get-theme-class :card :bg))
         theme-border (or (:border-class attrs) (get-theme-class :card :border))
-        theme-shadow (or (:shadow-class attrs) (get-theme-class :card :shadow))
-        theme-radius (or (get-theme-class :card :radius) "sm:rounded-lg")
-        theme-ring (or (get-theme-class :card :ring) "ring-1 ring-gray-200 dark:ring-gray-700")
-        base-attrs {:class (tw "overflow-hidden"
-                               theme-bg theme-border theme-shadow
-                               theme-radius theme-ring)}
-        filtered-attrs (dissoc attrs :bg-class :border-class :shadow-class)
+        base-attrs {:class (tw "rounded-lg" theme-bg theme-border)}
+        filtered-attrs (dissoc attrs :bg-class :border-class)
         merged-attrs (merge-attrs base-attrs filtered-attrs)]
     [:div merged-attrs
-     [:div {:class "px-4 py-5 sm:p-6"}
-      content]]))
+     content]))
 
 (defmethod c/resolve-alias ::card-with-header
   [_ attrs content]
@@ -270,7 +360,7 @@
         theme-border (or (:border-class attrs) (get-theme-class :card-with-header :border))
         theme-shadow (or (:shadow-class attrs) (get-theme-class :card-with-header :shadow))
         theme-radius (or (get-theme-class :card-with-header :radius) "rounded-lg")
-        theme-ring (or (get-theme-class :card-with-header :ring) "ring-1 ring-gray-200 dark:ring-gray-700")
+        theme-ring (or (get-theme-class :card-with-header :ring) "ring-1 ring-[#e0e0e0] dark:ring-[#333333]")
         base-attrs {:class (tw "overflow-hidden"
                                theme-border theme-bg theme-shadow
                                theme-radius theme-ring)}
@@ -282,10 +372,44 @@
      [:div {:class "px-4 py-5 sm:px-6"} header]
      [:div {:class "px-4 py-5 sm:p-6"} body]]))
 
+(defmethod c/resolve-alias ::stat
+  [_ attrs content]
+  (let [theme-bg (get-theme-class :stat :bg)
+        theme-base (get-theme-class :stat :base)
+        theme-label (get-theme-class :stat :label)
+        theme-value (get-theme-class :stat :value)
+        color (:color attrs)
+        value-color (case color
+                      "green" "text-green-600 dark:text-green-400"
+                      "red" "text-red-600 dark:text-red-400"
+                      "blue" "text-blue-600 dark:text-blue-400"
+                      "yellow" "text-yellow-600 dark:text-yellow-400"
+                      "purple" "text-purple-600 dark:text-purple-400"
+                      nil)
+        icon (:icon attrs)
+        icon-color (case color
+                     "green" "text-green-500 dark:text-green-400"
+                     "red" "text-red-500 dark:text-red-400"
+                     "blue" "text-blue-500 dark:text-blue-400"
+                     "yellow" "text-yellow-500 dark:text-yellow-400"
+                     "purple" "text-purple-500 dark:text-purple-400"
+                     "text-[#a0a0a0] dark:text-[#707070]")
+        filtered-attrs (dissoc attrs :color :value :label :icon)]
+    [:div (merge-attrs {:class (tw theme-bg theme-base)} filtered-attrs)
+     [:div.flex.items-center.justify-between
+      [:div
+       [:dt {:class theme-label} (:label attrs)]
+       [:dd {:class (if value-color
+                      (str "mt-1 text-3xl font-semibold tracking-tight " value-color)
+                      theme-value)}
+        (:value attrs)]]
+      (when icon
+        [:div {:class (tw "h-10 w-10 opacity-50" icon-color)}
+         icon])]]))
+
 (defmethod c/resolve-alias ::button
   [_ attrs content]
   (let [size (or (:size attrs) :md)
-        text (or (first content) (:title attrs))
         variant (or (:variant attrs) :primary)
 
         ;; Get theme classes
@@ -308,9 +432,10 @@
         filtered-attrs (dissoc attrs
                                :size :title :variant :type
                                :bg-class :hover-class :focus-class :text-class)
-        merged-attrs (merge-attrs base-attrs filtered-attrs)]
+        merged-attrs (merge-attrs base-attrs filtered-attrs)
+        body (or (seq content) [(:title attrs)])]
 
-    [:button merged-attrs text]))
+    (into [:button merged-attrs] body)))
 
 (defmethod c/resolve-alias ::input
   [_ attrs _content]
@@ -419,8 +544,9 @@
         content]]
       (when dismissible?
         [:div.ml-auto.pl-3
-         [:button.text-gray-400.hover:text-gray-500.focus:outline-none
-          {:type "button"
+         [:button.focus:outline-none
+          {:class "text-[#a3a3a3] hover:text-[#737373]"
+           :type "button"
            :onclick "this.closest('[class*=\"rounded-md p-4 border\"]').remove()"}
           [:span.sr-only "Dismiss"]
           [::icon#solid-x-mark
@@ -445,13 +571,14 @@
         {:src logo-url}]
        (when title
          [:div
-          {:class "font-medium text-lg text-gray-300 dark:text-gray-300"}
+          {:class "font-medium text-lg text-[#d0d0d0] dark:text-[#d0d0d0]"}
           title])]
 
       ;; Mobile menu toggle button
       [:div.sm:hidden
-       [:button.block.text-gray-300.hover:text-white.focus:text-white.focus:outline-none
-        {:data-on-click "$navbarOpen = !$navbarOpen"
+       [:button.block.hover:text-white.focus:text-white.focus:outline-none
+        {:class "text-[#d0d0d0]"
+         :data-on-click "$navbarOpen = !$navbarOpen"
          :type "button"}
         [:div
          [:div {:data-if "$navbarOpen"}
@@ -510,7 +637,7 @@
          (:label option)])]
      [:div {:class theme-icon}
       [::icon#solid-chevron-up-down
-       {:class "h-5 w-5 text-gray-400"}]]]))
+       {:class "h-5 w-5 text-[#a3a3a3]"}]]]))
 
 (defmethod c/resolve-alias ::a
   [_ attrs content]
@@ -523,21 +650,24 @@
   [_ attrs content]
   (let [theme-bg (or (:bg-class attrs) (get-theme-class :sidebar :bg))]
 
-    [:div.flex.h-screen
+    [:div.flex.min-h-full
      ;; Sidebar backdrop for mobile
-     [:div#sidebar-backdrop.fixed.inset-0.bg-gray-800.bg-opacity-75.z-20.hidden.lg:hidden
-      {:onclick (clj->js
+     [:div#sidebar-backdrop.fixed.inset-0.bg-opacity-75.z-20.hidden.lg:hidden
+      {:class "bg-[#252525]"
+       :onclick (clj->js
                  (let [sidebar (js/document.getElementById "sidebar")
                        backdrop (js/document.getElementById "sidebar-backdrop")
-                       content (js/document.getElementById "sidebar-content")]
+                       content (js/document.getElementById "sidebar-content")
+                       toggle (js/document.getElementById "sidebar-toggle")]
                    (.add (.-classList sidebar) "-translate-x-full")
                    (.add (.-classList backdrop) "hidden")
+                   (.remove (.-classList toggle) "hidden")
                    ;; On mobile, add ml-0 to override the margin
                    (when content (.add (.-classList content) "ml-0"))))}]
 
      [:aside#sidebar
       {:class (tw theme-bg
-                  "fixed inset-y-0 left-0 z-30 w-64"
+                  "fixed left-0 bottom-0 z-30 w-64"
                   "transform -translate-x-full lg:translate-x-0"
                   "transition-transform duration-300 ease-in-out")}
 
@@ -546,21 +676,25 @@
        content]]
 
      ;; Toggle button for mobile
-     [:div.fixed.bottom-4.left-4.lg:hidden.z-30
-      [:button.p-2.rounded-full.bg-gray-800.text-white.shadow-lg
-       {:onclick (clj->js
+     [:div#sidebar-toggle.fixed.bottom-4.left-4.lg:hidden.z-30
+      [:button.p-2.rounded-full.text-white.shadow-lg
+       {:class "bg-[#252525]"
+        :onclick (clj->js
                   (let [sidebar (js/document.getElementById "sidebar")
                         backdrop (js/document.getElementById "sidebar-backdrop")
-                        content (js/document.getElementById "sidebar-content")]
+                        content (js/document.getElementById "sidebar-content")
+                        toggle (js/document.getElementById "sidebar-toggle")]
                     (if (.contains (.-classList sidebar) "-translate-x-full")
                       (do
                         (.remove (.-classList sidebar) "-translate-x-full")
                         (.remove (.-classList backdrop) "hidden")
+                        (.add (.-classList toggle) "hidden")
                         ;; On mobile, remove the ml-0 override to show the margin
                         (when content (.remove (.-classList content) "ml-0")))
                       (do
                         (.add (.-classList sidebar) "-translate-x-full")
                         (.add (.-classList backdrop) "hidden")
+                        (.remove (.-classList toggle) "hidden")
                         ;; On mobile, add ml-0 to override the margin
                         (when content (.add (.-classList content) "ml-0"))))))}
        [::icon#solid-bars-3 {:class "h-6 w-6"}]]]]))
@@ -579,8 +713,9 @@
                 :checked (not collapsed?)}]
 
        (when-let [title (:title attrs)]
-         [:label.px-3.mb-2.text-xs.font-semibold.text-gray-400.uppercase.cursor-pointer.flex.items-center.justify-between.select-none
-          {:for group-id}
+         [:label.px-3.mb-2.text-xs.font-semibold.uppercase.cursor-pointer.flex.items-center.justify-between.select-none
+          {:class "text-[#a3a3a3]"
+           :for group-id}
           title
           ;; Chevron icon that rotates based on state
           [:svg.w-4.h-4.transition-transform.peer-checked:rotate-180
@@ -598,7 +733,8 @@
     ;; Static version when :collapsed attribute is not present (original behavior)
     [:div.mb-6
      (when-let [title (:title attrs)]
-       [:h3.px-3.mb-2.text-xs.font-semibold.text-gray-400.uppercase
+       [:h3.px-3.mb-2.text-xs.font-semibold.uppercase
+        {:class "text-[#a3a3a3]"}
         title])
      [:ul.space-y-1
       content]]))
@@ -639,7 +775,7 @@
   [_ _ content]
   (let [sidebar-element (first content)
         content-element (second content)]
-    [:div.flex.h-screen
+    [:div.flex.min-h-full
      sidebar-element
      [:div#sidebar-content
       {:class "flex-1 transition-all duration-300 ease-in-out ml-0 lg:ml-64 overflow-auto"}
@@ -656,7 +792,7 @@
 
    ;; Desktop horizontal tabs (hidden on mobile)
    [:div.hidden.sm:block
-    [:div.border-b.border-gray-200
+    [:div.border-b {:class "border-[#e0e0e0]"}
      [:nav {:aria-label "Tabs"
             :class "-mb-px flex space-x-8"}
       content]]]])
@@ -672,10 +808,10 @@
         mobile-classes "border-l-2 border-b-0 px-4 py-3 w-full sm:w-auto"
         active-classes (if active?
                          "border-indigo-500 text-indigo-600"
-                         "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700")
+                         "border-transparent text-[#737373] hover:border-[#d0d0d0] hover:text-[#525252]")
         icon-classes (if active?
                        "text-indigo-500"
-                       "text-gray-400 group-hover:text-gray-500")]
+                       "text-[#a3a3a3] group-hover:text-[#737373]")]
     [:a {:class (tw base-classes desktop-classes mobile-classes active-classes "cursor-pointer")
          :aria-current (when active? "page")
          :data-on-click handler}
@@ -725,10 +861,10 @@
         ;; Container classes
         container-classes (get-theme-class :view :bg)
         card-container-classes "mx-auto w-full sm:max-w-lg"
-        heading-classes "mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900 dark:text-gray-100"
+        heading-classes "mt-10 text-center text-2xl/9 font-bold tracking-tight text-[#171717] dark:text-[#f5f5f5]"
         form-container-classes "mt-10 mx-auto w-full sm:max-w-lg"
         form-classes "space-y-6"
-        footer-text-classes "mt-10 text-center text-sm/6 text-gray-500 dark:text-gray-400"
+        footer-text-classes "mt-10 text-center text-sm/6 text-[#737373] dark:text-[#a3a3a3]"
         link-classes "font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 cursor-pointer"
 
         ;; Prepare base attributes
@@ -998,3 +1134,62 @@
         filtered-attrs (dissoc attrs :time :format :timezone)
         merged-attrs (merge-attrs base-attrs filtered-attrs)]
     [:time merged-attrs formatted]))
+
+(defmethod c/resolve-alias ::badge
+  [_ attrs content]
+  (let [color (or (:color attrs) "gray")
+        variant (or (:variant attrs) :pill)
+        size (or (:size attrs) :md)
+        base-class "inline-flex items-center text-xs font-medium"
+        size-class (case size
+                     :sm "px-2.5 py-0.5"
+                     :md "px-2 py-1")
+        shape-class (case variant
+                      :pill "rounded-full"
+                      :outlined "rounded-md ring-1 ring-inset")
+        color-class (if (= variant :outlined)
+                      (case color
+                        "green" "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 ring-green-600/20 dark:ring-green-500/30"
+                        "red" "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 ring-red-600/20 dark:ring-red-500/30"
+                        "blue" "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 ring-blue-600/20 dark:ring-blue-500/30"
+                        "yellow" "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 ring-yellow-600/20 dark:ring-yellow-500/30"
+                        "purple" "bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 ring-purple-600/20 dark:ring-purple-500/30"
+                        "gray" "bg-[#f9f9f9] dark:bg-[#252525] text-[#525252] dark:text-[#a3a3a3] ring-[#525252]/20 dark:ring-[#737373]/30"
+                        "indigo" "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 ring-indigo-600/20 dark:ring-indigo-500/30"
+                        "bg-[#f9f9f9] dark:bg-[#252525] text-[#525252] dark:text-[#a3a3a3] ring-[#525252]/20 dark:ring-[#737373]/30")
+                      ;; pill variant
+                      (case color
+                        "green" "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
+                        "red" "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400"
+                        "blue" "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400"
+                        "yellow" "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
+                        "purple" "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400"
+                        "gray" "bg-[#f5f5f5] dark:bg-[#252525] text-[#171717] dark:text-[#d0d0d0]"
+                        "indigo" "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-400"
+                        "bg-[#f5f5f5] dark:bg-[#252525] text-[#171717] dark:text-[#d0d0d0]"))
+        full-class (tw base-class size-class shape-class color-class (:class attrs))
+        title (or (:title attrs)
+                  (when (every? string? content)
+                    (str/join " " content)))
+        filtered-attrs (-> (dissoc attrs :color :variant :size)
+                           (assoc :class full-class)
+                           (cond-> title (assoc :title title)))]
+    (into [:span filtered-attrs] content)))
+
+(defmethod c/resolve-alias ::toggle
+  [_ attrs _content]
+  (let [disabled (:disabled attrs)
+        input-keys #{:name :id :checked :disabled}
+        input-attrs (-> (select-keys attrs input-keys)
+                        (assoc :type "checkbox")
+                        (merge (into {}
+                                 (filter (fn [[k _]] (and (keyword? k)
+                                                         (str/starts-with? (name k) "data-")))
+                                         attrs))))
+        label-class (tw "relative inline-flex items-center"
+                        (if disabled "cursor-not-allowed opacity-50" "cursor-pointer")
+                        (:class attrs))]
+    [:label {:class label-class}
+     [:input.sr-only.peer input-attrs]
+     [:div
+      {:class "w-11 h-6 bg-[#e0e0e0] dark:bg-[#333333] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#d0d0d0] dark:after:border-[#737373] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"}]]))
