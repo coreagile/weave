@@ -41,7 +41,7 @@
                       :sync-pom true
                       :group-id "me.calmabiding"
                       :artifact-id "weave"
-                      :version "0.2.4"}}
+                      :version "0.2.5"}}
 
   :install {:replace-deps {slipset/deps-deploy {:mvn/version "0.2.2"}}
             :exec-fn deps-deploy.deps-deploy/deploy
@@ -52,4 +52,7 @@
           :exec-fn deps-deploy.deps-deploy/deploy
           :exec-args {:installer :remote
                        :sign-releases? true
-                       :artifact "target/weave.jar"}}}}
+                       :artifact "target/weave.jar"}}
+
+  :release {:extra-deps {applied-science/deps-library {:mvn/version "0.4.0"}}
+            :main-opts ["-m" "applied-science.deps-library"]}}}
