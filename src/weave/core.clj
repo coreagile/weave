@@ -272,7 +272,7 @@
                     (:retry-interval opts)
                     (:retry-scaler opts))
             (.append sb ", "))
-          (.append sb "retryMaxWaitMs: ")
+          (.append sb "retryMaxWait: ")
           (.append sb retry-max-wait-ms))
         (when-let [retry-max-count (:retry-max-count opts)]
           (when (or (= (:type opts) :form)
@@ -303,6 +303,14 @@
         (.append sb "}"))
       (.append sb "{}"))
     (.toString sb)))
+
+(defn- resource-hash-aux
+  "Compute a short hash of a classpath resource for cache-busting."
+  [path]
+  (when-let [res (io/resource path)]
+    (Integer/toUnsignedString (hash (slurp res)) 36)))
+
+(def ^:private resource-hash (memoize resource-hash-aux))
 
 (defn- app-outer
   "Generate the outer HTML shell for the application.
@@ -340,7 +348,7 @@
              [[:meta {:name "mobile-web-app-capable" :content "yes"}]
               [:meta {:name "apple-mobile-web-app-capable" :content "yes"}]
               [:meta {:name "apple-mobile-web-app-status-bar-style" :content "black-translucent"}]
-              [:link {:rel "stylesheet" :href "/weave.css"}]
+              [:link {:rel "stylesheet" :href (str "/weave.css?v=" (resource-hash "public/weave.css"))}]
               [:style (str "html { background-color: " (or bg-color "#ffffff") "; }")]
               (when bg-color
                 [:meta {:name "theme-color" :content bg-color}])])
@@ -354,7 +362,7 @@
            (when (get opts :tailwind true)
              [:script {:src "/tailwind@3.4.16.js"}])
            [:script {:src "/squint.core.umd@0.9.182.js"}]
-           [:script {:type "module" :src "/weave.js"}]
+           [:script {:type "module" :src (str "/weave.js?v=" (resource-hash "public/weave.js"))}]
            (when-let [push-opts (:push opts)]
              [:script
               (str "window.WEAVE_VAPID_PUBLIC_KEY = '" (:vapid-public-key push-opts) "';")])
@@ -367,9 +375,9 @@
            (when (:dev-mode opts)
              [:div {:id "weave-dev-debug"
                     :class "fixed top-1 right-1 z-50 flex flex-col items-end gap-2"
-                    :data-signals-weave-signals "false"}
+                    :data-signals:weave-signals "false"}
               [:button {:class "bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded shadow-lg border border-blue-500"
-                        :data-on-click "$weaveSignals = !$weaveSignals"}
+                        :data-on:click "$weaveSignals = !$weaveSignals"}
                "↖"]
               [:div {:class "bg-gray-900 text-green-400 text-xs p-3 rounded shadow-lg max-w-md max-h-96 overflow-auto"
                      :data-show "$weaveSignals"
